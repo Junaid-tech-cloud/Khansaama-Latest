@@ -1,58 +1,66 @@
 import React, { useState, useEffect } from "react";
 import Spinner from "./Components/Spinner/Spinner";
 import Cookies from 'universal-cookie';
-import { Link } from "react-router-dom";
+import { Link, Redirect } from "react-router-dom";
+import "./Cart.css";
 
 const cookies = new Cookies();
 
 
 
 const Cart = () => {
-  const [cart, setCart] = useState(null);
-  const [orderedBy, setOrderedBy] = useState('')
-  const orderHandler = async () => {
-    let foodIds = [];
-    let chefs = [];
-    let total = 0;
-    cart.map((i) => {
-      foodIds.push(i.foodID);
-      chefs.push(i.chefID);
-      total += i.foodPrice;
-    });
-    // const cookies = new Cookies();
-    const orderedBy = cookies.get("chef_Id")
-    console.log(orderedBy) //HardCoded Customer: Later Replace with Customer ID from token
-    const createdBy = chefs;
-    const itemsOrdered = foodIds;
-    const orderDate = "2020-10-02";
-    const bill = total;
-    const receipt = "123";
-    console.log("Food IDS are", createdBy, itemsOrdered, bill);
+  const [cart, setCart] = useState(!window.localStorage.getItem('cart') ? {itemsOrdered: [], amount: 0} : JSON.parse(window.localStorage.getItem('cart')));
+  const [cartIsEmpty, setCartIsEmpty] = useState(true);
 
-    const orderInfo = {
-      createdBy,
-      itemsOrdered,
-      orderedBy,
-      orderDate,
-      bill,
-      receipt,
-    };
+  const orderHandler = async () => {
+    // let foodIds = [];
+    // let chefs = [];
+    // let total = 0;
+    // cart.map((i) => {
+    //   foodIds.push({id: i.foodID, quantity: 1});
+    //   chefs.push(i.chefID);
+    //   total += i.foodPrice;
+    // });
+    // // const cookies = new Cookies();
+    // const orderedBy = cookies.get("userId")
+    // console.log(orderedBy) //HardCoded Customer: Later Replace with Customer ID from token
+    // const createdBy = chefs;
+    // const itemsOrdered = foodIds;
+    // const orderDate = "2020-10-02";
+    // const amount = total;
+    // console.log("Food IDS are", createdBy, itemsOrdered, amount);
+
+    // const orderInfo = {
+    //   createdBy,
+    //   itemsOrdered,
+    //   orderedBy,
+    //   orderDate,
+    //   amount,
+    // };
+
+    let cartObject = cart;
+    cartObject.paymentType = "COD";
+    cartObject.source = null;
+    cartObject.orderedBy = cookies.get('userId');
+
 
     const request = await fetch("http://localhost:3000/orders/place", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(orderInfo),
+      body: JSON.stringify(cartObject),
     });
     console.log(request);
   };
 
   useEffect(() => {
-    // const dataFromCookie = cookies.get('chef_id')
-    // setOrderedBy(dataFromCookie)
-    // console.log(orderedBy)
     const data = JSON.parse(window.localStorage.getItem("cart"));
+    if(!data) {
+      setCartIsEmpty(true);
+      return;
+    }
+    setCartIsEmpty(false);
     setCart(data);
   }, []);
 
@@ -60,6 +68,7 @@ const Cart = () => {
    
    
     <>
+    {cartIsEmpty ? <div id="loginRedir"><Link to = '/login'>You're not logged in. Click here to log in and start ordering.</Link></div> :
       <div>
         <section
           id="menu"
@@ -82,7 +91,7 @@ const Cart = () => {
                     {/* //////////////////////////////////////////////////////////////////////// */}
                    
                   
-                    {cart.map((dish, index) => (
+                    {cart[`itemsOrdered`].map((dish, index) => (
                       <div className="col-lg-6 menu-item" key={index}>
                         <img
                           src={require("./assets/img/menu/lobster-bisque.jpg")}
@@ -105,14 +114,13 @@ const Cart = () => {
                 
                     </div>{" "}
                 <div>
-                <button type="button" class="btn btn-primary mt-5"
+                <button type="button" className="btn btn-primary mt-5"
                 onClick={orderHandler}>
                 Cash on delivery
                 </button>
 
               <Link to = '/payment'>   
-                <button type="button" class="btn btn-primary mt-5 ml-5"
-                onClick={orderHandler}>
+                <button type="button" className="btn btn-primary mt-5 ml-5">
                 Pay through card
                 </button>
                 </Link>
@@ -128,6 +136,7 @@ const Cart = () => {
           </div>
         </section>
       </div>
+}
     </>
               
 

@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-const date = new Date();
-var dd = date.getDate();
-var mm = date.getMonth();
-var yy = date.getFullYear();
-var hh = date.getHours();
-var mn = date.getMinutes();
+// const date = new Date();
+// var dd = date.getDate();
+// var mm = date.getMonth();
+// var yy = date.getFullYear();
+// var hh = date.getHours();
+// var mn = date.getMinutes();
 //creates an order schema
 var orderSchema = new Schema ({
 
@@ -62,18 +62,42 @@ var orderSchema = new Schema ({
     },
 
     orderDate: {
-        type: String,
-        default: dd + "-" + mm + "-" + yy + "-" + hh + ":" + mn
+        type: Date,
+        default: new Date()
     },
 
     status: {
-        type: Boolean,
-        default: false
+        type: String,
+        enum: ["PLACED", "ONGOING", "SHIPPED", "COMPLETE", "CANCELLED"],
+        default: "PLACED"
     },
-    bill: {
-        type: Number,
-        required: true,
-        default: 0.00
+    paymentInfo: {
+        amount: {
+            type: Number,
+            required: true,
+        },
+        paymentType: {
+            type: String,
+            enum: ["COD", "CARD"]
+        },
+        paymentStatus: {
+            type: String,
+            enum: ["FAILED", "COMPLETE", "ON-HOLD", "ERROR"]
+        },
+        paymentReceipt: {
+            type: String,
+            default: null,
+        },
+        stripePaymentId: {
+            type: String,
+            default: null
+        },
+        paymentCard: {
+            brand: String,
+            last4: String,
+            exp_year: Number,
+            exp_month: Number
+        }
     }
 
 });

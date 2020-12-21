@@ -6,24 +6,24 @@ import { useEffect } from 'react';
 import Cookies from 'universal-cookie';
 import axios from 'axios';
 function Dashboard(props) {
-let chefId;
-let chefName;
+let userId;
+let userName;
 const cookies = new  Cookies;
 const [foods, setChefFoods] = useState([]);
 
 
 	useEffect(() => {
-		chefId = cookies.get('chef_Id');
-		chefName = cookies.get('chef_name')
-		console.log(`chef Id is ${chefId}`);
-		console.log(`chef name is ${chefName}`);
+		userId = cookies.get('userId');
+		userName = cookies.get('userName')
+		console.log(`user Id is ${userId}`);
+		console.log(`user name is ${userName}`);
 
 		async function fetchFoodForChefs() {
-			// const request = await fetch("http://localhost:3000/food/by/"+chefId);
+			// const request = await fetch("http://localhost:3000/food/by/"+userId);
 			// const response = await request.json();
 			// console.log(response);
 			let result = await axios({
-				method: 'get',url : "http://localhost:3000/food/by/"+chefId
+				method: 'get',url : "http://localhost:3000/food/by/"+userId
 		,headers: {
 authorization: cookies.get('ka_token')
 		}})

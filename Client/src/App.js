@@ -25,6 +25,8 @@ import AddFood from "./Components/ChefDashBoard/AddFood";
 //import Cart from "./Components/Cart/cart";
 import Cart from "./Cart"
 // import Card from './Components/Payment/Card';
+import { Elements, StripeProvider } from "react-stripe-elements";
+import Card from "./Components/Payment/Card";
 
 
 
@@ -41,6 +43,13 @@ const App = () => {
         <Route path="/add/food" component={AddFood} />
         <Route path="/order" component={Order} />
         <Route path="/cart" component={Cart} />
+        <StripeProvider
+              apiKey={"pk_test_hGENnJ7Ns3whNA4pXCFNOHm900LPxvKeOc"}
+              >
+              <Elements>
+              <Route path="/payment" component={Card} />
+              </Elements>
+        </StripeProvider>
       </div>
     </Switch>
   );

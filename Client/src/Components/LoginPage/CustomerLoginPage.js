@@ -54,6 +54,7 @@ class CustomerLogin extends Component {
 
     console.log(`User data: ${JSON.stringify(data)}`);
     cookies.set('ka_token', data.token, { path: '/' });
+    cookies.set('userId', data.user._id, { path: '/' });
     let dashboardRoute = data.user.role === "customer" ? "/home": "/dashboard";
     return  this.props.history.push({
       pathname: dashboardRoute,

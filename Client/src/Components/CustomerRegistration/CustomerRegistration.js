@@ -139,8 +139,9 @@ class CustomerRegistration extends Component {
      .then(res => res.json())
      .then(data => {
       cookies.set('ka_token', data.token, { path: '/' });
-      cookies.set('chef_Id', data.user._id, {path: '/'} );
-      cookies.set('chef_name', data.user.name, {path: '/'} );
+      cookies.set('userId', data.user._id, {path: '/'} );
+      cookies.set('userName', data.user.name, {path: '/'} );
+      cookies.set('userRole', data.user.role, {path: '/'} );
       let dashboardRoute = data.user.role === "customer" ? "/home": "/dashboard";
       return  this.props.history.push({
         pathname: dashboardRoute,

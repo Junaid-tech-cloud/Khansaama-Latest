@@ -1,4 +1,6 @@
+require('dotenv').config();
 const { mongoose, ObjectID } = require("../app/config/");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_DEV);
 const { Order } = require("../models/order");
 const { Chef } = require("../models/chef");
 const { Customer } = require("../models/customer.js");
@@ -7,65 +9,127 @@ const { Food } = require("../models/food.js");
 module.exports = {
   placeOrder: async (req, res, next) => {
     var newOrder;
-    let { itemsOrdered, orderedBy, createdBy, orderDate, bill } = req.body;
-    let createdByFiltered = [];
+    let { itemsOrdered, orderedBy, amount, paymentType, source } = req.body;
+    let createdBy = [];
     let chefNames = [];
     let itemsDetails = [];
     let customerName = "";
-    let paymentDocument = {};
-    let orderItems = [];
-    await Customer.findById(orderedBy).then((customer) => {
-      customerName = customer.name;
-    });
+    let customerEmail = "";
+    let paymentInfo = {};
+    let orderDate = new Date();
+    const amountConverted = amount * 100;
 
-    for (var i = 0; i < createdBy.length; i++) {
-      if (createdByFiltered.indexOf(createdBy[i]) == -1) {
-        createdByFiltered.push(createdBy[i]);
-        await Chef.findById(createdByFiltered[i])
-          .then((chef) => {
-            chefNames.push(chef.name);
-          })
-          .catch((err) => {
-            res.status(500).send({ error: err });
-          });
-      }
+
+    if(orderedBy) {
+      await Customer.findById(orderedBy).then((customer) => {
+        customerName = customer.name;
+        customerEmail = customer.email;
+        customerPhone = customer.phone;
+      });
+    } else {
+      orderedBy = !orderedBy ? new ObjectID() : orderedBy;
+      customerName = "Guest";
+        customerEmail = "guest@khansaama.com";
+        customerPhone = "12345678901";
     }
 
     for (var i = 0; i < itemsOrdered.length; i++) {
-      let item = await Food.findById(itemsOrdered[i]);
-      console.log("Item is ", item);
+      chefNames.push(itemsOrdered[i].chefName);
+      createdBy.push(itemsOrdered[i].chefID);
       itemsDetails.push({
-        itemId: item._id,
-        itemName: item.name,
+        itemId: itemsOrdered[i].foodID,
+        itemName: itemsOrdered[i].foodName,
         itemQuantity: itemsOrdered[i].quantity,
-        itemSeller: item.chef,
-        itemSellerName: item.chefName,
-        itemTotalPrice: item.price,
+        itemSeller: itemsOrdered[i].chefID,
+        itemSellerName: itemsOrdered[i].chefName,
+        itemTotalPrice: itemsOrdered[i].foodPrice * itemsOrdered[i].quantity,
       });
     }
-    console.log("Food Saved");
+
+    const orderId = new ObjectID();
+
+    let orderStripeCharge;
+
+    paymentInfo.paymentType = paymentType;
+    if(paymentInfo.paymentType === "CARD") {
+
+      //TODO: Add Stripe here
+      orderStripeCharge = await stripe.charges.create({
+        amount: amountConverted,
+        currency: 'pkr',
+        source,
+        description: `Payment for order ${orderId}`,
+        metadata: {
+          customerName,
+          customerEmail,
+          customerPhone
+        }
+      });
+
+      if(!orderStripeCharge.id || !orderStripeCharge.status === "succeeded" || !orderStripeCharge.status === "pending") {
+        return res.status(500).send({success: false, error: "Error chargin customer"});
+      }
+
+      const {brand, exp_year, exp_month, last4} = orderStripeCharge.payment_method_details.card;
+  
+      //Replace amount sent by client with the actual amount charged
+      amount = orderStripeCharge.amount / 100;
+      paymentInfo = {
+        paymentType,
+        paymentStatus: orderStripeCharge.status === "succeeded" ? "COMPLETE" : orderStripeCharge.status === "failed" ? "FAILED" : orderStripeCharge.status === "pending" ? "ON-HOLD" : null,
+        paymentReceipt: orderStripeCharge.receipt_url,
+        stripePaymentId: orderStripeCharge.id,
+        paymentCard: {
+          brand,
+          exp_year,
+          exp_month,
+          last4
+        },
+        amount
+      }
+    }
 
     newOrder = new Order({
+      _id: orderId,
       itemsOrdered: itemsDetails,
       orderedBy,
       customerName,
-      createdBy: createdByFiltered,
+      createdBy,
       chefNames,
       orderDate,
-      bill,
+      paymentInfo
     });
 
     await newOrder
       .save()
       .then((order) => {
         console.log("Order Saved ", order);
-        res.status(200).send(order);
+        res.status(200).send({success: true, orderDetails: order});
       })
       .catch((err) => {
         console.log("Order Error ", err);
-        res.status(200).send(err);
+        res.status(200).send({success: false, error: err});
       });
     return next();
+  },
+
+  updateOrder: async (req, res) => {
+
+    const { status } = req.body;
+    const orderId = req.params.orderId;
+
+    if(!status || !["ONGOING", "SHIPPED", "COMPLETE", "CANCELLED"].includes(status)) {
+      return res.status(500).send({success: false, error: `Invalid order status sent => ${status}`});
+    }
+
+    Order.findByIdAndUpdate({_id: orderId}, {status}, (err, doc) => {
+      if(err) {
+        return res.status(500).send({success: false, error: `Error updating order: ${err}`});
+      }
+
+      return res.status(200).send({success: true, updatedOrder: doc});
+    });
+
   },
 
   getIncomplete: async (req, res, next) => {
@@ -74,11 +138,11 @@ module.exports = {
     if (req.body.role === "chef") {
       ongoingOrders = await Order.find({
         "itemsOrdered.itemSeller": req.body.id,
-        status: 0,
+        status: {$or: ["PLACED", "ONGOING"]}
       });
       res.status(200).send({ orders: ongoingOrders });
     } else if (req.body.role === "customer") {
-      ongoingOrders = await Order.find({ orderedBy: req.body.id, status: 0 });
+      ongoingOrders = await Order.find({ orderedBy: req.body.id, status: {$or: ["PLACED", "ONGOING"]} });
 
       res.status(200).send({ orders: ongoingOrders });
     }

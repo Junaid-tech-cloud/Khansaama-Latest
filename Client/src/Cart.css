@@ -55,6 +55,15 @@ body {
     
     
 }
+
+#loginRedir {
+    max-width: max-content;
+    margin: auto;
+    padding: 1em 2em;
+    background-color: white;
+    text-transform: none;
+    font-weight: bold;
+}
 h1 {
     background-color: black;
     font-weight: 100;
@@ -211,3 +220,5 @@ label {
         width: 40%;
    }
 }
+
+

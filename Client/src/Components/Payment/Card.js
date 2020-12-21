@@ -1,63 +1,73 @@
 import React from 'react';
-import './Card.css';
+import {useState, useEffect} from 'react';
+import { CardElement, injectStripe } from 'react-stripe-elements';
+import Cookies from 'universal-cookie';
+import { Link, Redirect } from "react-router-dom";
 
-export default function Card() {
+import './Card.css';
+const cookies = new Cookies();
+
+export default injectStripe(function Card(props) {
+  
+  const [cart, setCart] = useState(!window.localStorage.getItem('cart') ? {itemsOrdered: [], amount: 0} : JSON.parse(window.localStorage.getItem('cart')));
+  const [cartIsEmpty, setCartIsEmpty] = useState(true);
+
+  useEffect(() => {
+    const dataFromCookie = cookies.get('userId')
+    const data = JSON.parse(window.localStorage.getItem("cart"));
+
+    if(!data) {
+      setCartIsEmpty(true);
+      return;
+    }
+    setCartIsEmpty(false);
+    setCart(data);
+  }, []);
+
+
+  const orderData = JSON.parse(window.localStorage.getItem("cart"));
+  console.log(`cart from LC: ${JSON.stringify(orderData)}`)
+  let source = null;
+  const processPayment = () => {
+    props.stripe.createToken().then( tokenData => {
+      if(!tokenData.token) {
+        console.log(`Token creatoin failed`);        
+      }
+      else {
+        source = tokenData.token.id;
+        orderData.source = source;
+        orderData.paymentType = "CARD";
+        orderData.orderedBy = cookies.get('userId');
+          
+          fetch("http://localhost:3000/orders/place", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(orderData),
+          })
+          .then(response => response.json())
+          .then(jsonResponse => console.log(`Order response: ${JSON.stringify(jsonResponse)}`))
+          .catch(err => console.log(`Error placing order: ${err}`))
+        }
+      })
+      .catch(err => console.log(`Error placing order: ${err}`))
+    }
+
     return (
+        <div id="paymentContainer" style={{display: "grid", gridTemplateColumns: "100%"}}>
         <div>
-        <div>
-        <div id="card-success" className="hidden">
-          <i className="fa fa-check" />
-          <p>Payment Successful!</p>
-        </div>
-        <div id="form-errors" className="hidden">
-          <i className="fa fa-exclamation-triangle" />
-          <p id="card-error">Card error</p>
-        </div>
-        <div id="form-container">
-          <div id="card-front">
-            <div id="shadow" />
-            <div id="image-container">
-              <span id="amount">paying: <strong>$99</strong></span>
-              <span id="card-image">
-              </span>
-            </div>
-            {/*- end card image container -*/}
-            <label htmlFor="card-number">
-              Card Number
-            </label>
-            <input type="text" id="card-number" placeholder="1234 5678 9101 1112" length={16} />
-            <div id="cardholder-container">
-              <label htmlFor="card-holder">Card Holder
-              </label>
-              <input type="text" id="card-holder" placeholder="e.g. John Doe" />
-            </div>
-            {/*- end card holder container -*/}
-            <div id="exp-container">
-              <label htmlFor="card-exp">
-                Expiration
-              </label>
-              <input id="card-month" type="text" placeholder="MM" length={2} />
-              <input id="card-year" type="text" placeholder="YY" length={2} />
-            </div>
-            <div id="cvc-container">
-              <label htmlFor="card-cvc"> CVC/CVV</label>
-              <input id="card-cvc" placeholder="XXX-X" type="text" min-length={3} max-length={4} />
-              <p>Last 3 or 4 digits</p>
-            </div>
-            {/*- end CVC container -*/}
-            {/*- end exp container -*/}
+          <h2>Order Payment :</h2>
+          <p style={{textTransform: "none"}}>Please enter your card details below and click Pay Now.</p>
+          <div id="pricingContainer" style={{display: "grid", gridTemplateColumns: "1fr 1fr"}}>
+            <span>Order Total: </span>
+            <span>{orderData.amount}</span>
           </div>
-          {/*- end card front -*/}
-          <div id="card-back">
-            <div id="card-stripe">
-            </div>
-          </div>
-          {/*- end card back -*/}
-          <input type="text" id="card-token" />
-          <button type="button" id="card-btn">Submit</button>
         </div>
-      </div>
-      
+        <div id={`stripeCard`}>
+          <CardElement />
+          <button onClick={processPayment}>Pay Now</button>
+        </div>
         </div>
     )
-}
+})

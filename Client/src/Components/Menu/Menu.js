@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from "react";
 import Spinner from "../Spinner/Spinner";
-import {Link} from 'react-router-dom'
+import {Link} from 'react-router-dom';
+import Cookies from 'universal-cookie';
+
+const cookies = new Cookies();
+const orderedBy = cookies.get("userId");
 
 function Menu() {
   const [dishes, setDishes] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(!window.localStorage.getItem('cart') ? {itemsOrdered: [], amount: 0, orderedBy} : JSON.parse(window.localStorage.getItem('cart')));
   const path = window.location.pathname.split("/");
   const slug = path[2];
 
@@ -20,27 +24,58 @@ function Menu() {
   }, []);
 
   useEffect(() => {
-    if (cart.length !== 0) {
+    if (cart[`itemsOrdered`].length !== 0) {
       cartInCookieHandler();
     }
   }, [cart]);
 
   function addDishHandler(dish) {
-    const data = {
+    const foodItem = {
       chefID: dish.chef,
       chefName: dish.chefName,
       foodID: dish._id,
       foodName: dish.name,
       foodPrice: dish.price,
+      quantity: 1,
       added: true,
     };
-    const newArray = [...cart, data];
-    setCart(newArray);
+    
+    let itemsOrdered = cart[`itemsOrdered`];
+    itemsOrdered.push(foodItem);
+
+    let orderedBy = cookies.get("userId");
+
+    let amount = Number(foodItem.foodPrice) + Number(cart.amount);
+    let updatedCart = {...cart, itemsOrdered};
+    updatedCart.orderedBy = orderedBy;
+    updatedCart.amount = amount;
+
+    setCart(updatedCart);
   }
 
   function removeDishHandler(id) {
-    const newArray = cart.filter((el) => el.foodID !== id);
-    setCart(newArray, cartInCookieHandler());
+
+    console.log(`Removing item: ${id}`)
+    let amount = cart.amount;
+    const itemsOrdered = cart[`itemsOrdered`].filter((el) => {
+      console.log(`el is :${JSON.stringify(el)}`)
+      if(el.foodID === id) {
+        amount = amount - Number(el.foodPrice);
+        console.log(`item found: ${id}`)
+        return false;
+      } else {
+
+        return true;
+      }
+    });
+
+    let updatedCart = cart;
+    updatedCart.itemsOrdered = itemsOrdered;
+    updatedCart.amount = amount;
+
+    console.log(`updatedCart = ${JSON.stringify(updatedCart)}`);
+    setCart(updatedCart);
+    console.log(`Cart from stprage: ${JSON.stringify(window.localStorage.getItem("cart"))}`);
   }
 
   function cartInCookieHandler() {
@@ -50,7 +85,7 @@ function Menu() {
   }
 
   return (
-    
+
     <div>
       <section
         id="menu"
@@ -86,7 +121,7 @@ function Menu() {
                         Lorem, deren, trataro, filede, nerada
                       </div>
                       <div className="menu-ingredients">
-                        {cart.find((el) => el.foodID === dish._id) ? (
+                        {cart.itemsOrdered.find((el) => el.foodID === dish._id) ? (
                           <button
                             style={{
                               background: "transparent",
@@ -119,7 +154,7 @@ function Menu() {
                   {/* //////////////////////////////////////////////////////////////////////// */}
                 </div>{" "}
                 <Link to = '/cart'>
-                <button type="button" class="btn btn-primary mt-5">
+                <button type="button" className="btn btn-primary mt-5">
                 Check Your Cart
                 </button>
                 </Link>

@@ -4,7 +4,7 @@ import Cookies from 'universal-cookie'
 const cookies = new Cookies();
 function Order() {
   const role = "chef"; // Hardcoded Chef/Customer role, later fetched from Token
-  const id = cookies.get('chef_Id'); // Hardcoded Chef/Customer Id, later fetched from Token
+  const id = cookies.get('userId'); // Hardcoded Chef/Customer Id, later fetched from Token
   const [orders, setOrders] = useState(null);
 
   useEffect(() => {

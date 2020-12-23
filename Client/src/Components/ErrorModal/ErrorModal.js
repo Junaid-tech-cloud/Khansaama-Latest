@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, Component} from 'react';
 import { Link } from 'react-router-dom'
 
@@ -14,6 +15,13 @@ class ErrorModal extends Component {
 
 
   render(){
+=======
+import React, { useState } from 'react';
+
+
+const ErrorModal = props =>{
+
+>>>>>>> c9a0fd1a2ef91681af3ed97d4806a5fc4fbf29d2
     return(
         <div className="container">
   {/* Button to Open the Modal */}
